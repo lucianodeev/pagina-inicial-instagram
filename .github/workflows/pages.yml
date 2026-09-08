@@ -34,3 +34,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+# Triggered to publish the custom-domain root redirect to /bio/.

@@ -1,0 +1,45 @@
+name: Apply uploaded bio photo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bio/luciano-bio.jpg.b64'
+      - '.github/workflows/apply-bio-photo.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Decode uploaded photo and update bio
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64
+          b64 = Path('bio/luciano-bio.jpg.b64')
+          out = Path('bio/luciano-bio.jpg')
+          out.write_bytes(base64.b64decode(b64.read_text(encoding='utf-8')))
+          html = Path('bio/index.html')
+          text = html.read_text(encoding='utf-8')
+          old = 'src="https://avatars.githubusercontent.com/u/73236643?v=4"'
+          new = 'src="./luciano-bio.jpg"'
+          if old not in text and new not in text:
+              raise SystemExit('Expected bio image source not found; aborting safely.')
+          if old in text:
+              text = text.replace(old, new, 1)
+          html.write_text(text, encoding='utf-8')
+          b64.unlink()
+          PY
+      - name: Commit photo replacement
+        run: |
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html bio/luciano-bio.jpg bio/luciano-bio.jpg.b64
+          git commit -m "feat: replace bio profile photo" || exit 0
+          git push origin main

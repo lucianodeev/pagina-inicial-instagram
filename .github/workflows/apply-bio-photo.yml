@@ -1,10 +1,9 @@
-name: Apply uploaded bio photo
+name: Apply exact bio photo
 
 on:
   push:
     branches: [main]
     paths:
-      - 'bio/luciano-bio-256.b64'
       - '.github/workflows/apply-bio-photo.yml'
 
 permissions:
@@ -17,29 +16,29 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Decode uploaded photo and update bio
+
+      - name: Download exact uploaded photo
+        run: |
+          curl -L --fail --silent --show-error \
+            'https://media.canva.com/v2/image-resize/format:JPG/height:200/quality:75/uri:ifs%3A%2F%2FM%2Fb7982eb7-dc5c-4823-b0f5-32dc28e83396/watermark:F/width:160?csig=AAAAAAAAAAAAAAAAAAAAAGxn-0YVq0KODHkVwmGNtO6v9eLZGlxWUmek6UWTHQHD&exp=1788906420&osig=AAAAAAAAAAAAAAAAAAAAAOx7Cie8UNk4ubPDliYl80R7D4vm9B2nVLhLKRr_cPb0&signer=media-rpc&x-canva-quality=thumbnail' \
+            -o bio/luciano-bio.jpg
+          test -s bio/luciano-bio.jpg
+
+      - name: Ensure bio points to local photo
         run: |
           python - <<'PY'
           from pathlib import Path
-          import base64
-          b64 = Path('bio/luciano-bio-256.b64')
-          out = Path('bio/luciano-bio.jpg')
-          out.write_bytes(base64.b64decode(b64.read_text(encoding='utf-8')))
           html = Path('bio/index.html')
           text = html.read_text(encoding='utf-8')
-          old = 'src="https://avatars.githubusercontent.com/u/73236643?v=4"'
-          new = 'src="./luciano-bio.jpg?v=2"'
-          if old not in text and new not in text:
-              raise SystemExit('Expected bio image source not found; aborting safely.')
-          if old in text:
-              text = text.replace(old, new, 1)
+          import re
+          text = re.sub(r'<img class="avatar" src="[^"]+" alt="Luciano Rodrigues Almeida" loading="eager">', '<img class="avatar" src="./luciano-bio.jpg?v=3" alt="Luciano Rodrigues Almeida" loading="eager">', text, count=1)
           html.write_text(text, encoding='utf-8')
-          b64.unlink()
           PY
-      - name: Commit photo replacement
+
+      - name: Commit exact photo replacement
         run: |
           git config user.name "ldr-rh-campanhas"
           git config user.email "llucianouam@gmail.com"
-          git add bio/index.html bio/luciano-bio.jpg bio/luciano-bio-256.b64
-          git commit -m "feat: replace bio profile photo with uploaded image" || exit 0
+          git add bio/index.html bio/luciano-bio.jpg
+          git commit -m "fix: use exact uploaded photo on bio" || exit 0
           git push origin main

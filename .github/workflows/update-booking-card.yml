@@ -1,0 +1,58 @@
+name: Update Luciano booking card
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/update-booking-card.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update booking card copy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('bio/index.html')
+          text = p.read_text(encoding='utf-8')
+
+          replacements = {
+            "<span class=\"title\" data-i18n=\"bookTitle\">Quero agendar com Luciano</span><span class=\"desc\" data-i18n=\"bookDesc\">Veja meu perfil, serviços disponíveis e opções de atendimento.</span>":
+            "<span class=\"title\" data-i18n=\"bookTitle\">Agendar com Luciano Rodrigues</span><span class=\"desc\" data-i18n=\"bookDesc\">CEO • Psicanalista • Gestor de RH e Projetos — veja o perfil e agende seu atendimento.</span>",
+
+            "bookTitle:'Quero agendar com Luciano',bookDesc:'Veja meu perfil, serviços disponíveis e opções de atendimento.'":
+            "bookTitle:'Agendar com Luciano Rodrigues',bookDesc:'CEO • Psicanalista • Gestor de RH e Projetos — veja o perfil e agende seu atendimento.'",
+
+            "bookTitle:'Prendre rendez-vous avec Luciano',bookDesc:'Découvrez mon profil, mes services et les possibilités de rendez-vous.'":
+            "bookTitle:'Prendre rendez-vous avec Luciano Rodrigues',bookDesc:'CEO • Psychanalyste • RH & Gestion de projets — découvrez le profil et réservez votre rendez-vous.'",
+
+            "bookTitle:'Book with Luciano',bookDesc:'View my professional profile, services and appointment options.'":
+            "bookTitle:'Book with Luciano Rodrigues',bookDesc:'CEO • Psychoanalyst • HR & Project Manager — view the profile and book your appointment.'",
+
+            "bookTitle:'Agendar con Luciano',bookDesc:'Consulta mi perfil profesional, servicios disponibles y opciones de atención.'":
+            "bookTitle:'Agendar con Luciano Rodrigues',bookDesc:'CEO • Psicoanalista • RR. HH. y Gestión de Proyectos — consulta el perfil y agenda tu atención.'"
+          }
+
+          for old, new in replacements.items():
+            if old not in text:
+              raise SystemExit(f'Expected text not found: {old[:80]}')
+            text = text.replace(old, new, 1)
+
+          p.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit update
+        run: |
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html
+          git commit -m "feat: prioritize Luciano booking CTA" || exit 0
+          git push origin main

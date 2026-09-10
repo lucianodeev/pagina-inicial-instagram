@@ -1,0 +1,36 @@
+name: Update training card link
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/update-training-card-link.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update only training primary card destination
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('bio/index.html')
+          s=p.read_text()
+          old='<a class="card training-offer" id="training-primary-link" href="https://ldrrhestrategia.com/treinamento?lang=pt"'
+          new='<a class="card training-offer" id="training-primary-link" href="https://painel.ldrrhestrategia.com/"'
+          if old not in s:
+              raise SystemExit('Training primary link target not found')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Commit focused link update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bio/index.html
+          git diff --cached --quiet || git commit -m "fix: point training bio card to LDR platform"
+          git push

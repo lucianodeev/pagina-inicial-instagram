@@ -1,0 +1,38 @@
+name: Update bio training price
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/update-bio-training-price.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update only training offer price
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('bio/index.html')
+          s=p.read_text()
+          old='''<span class="offer-meta" data-i18n="trainingOfferMeta">90 aulas + 6 encontros ao vivo</span><span class="desc" data-i18n="trainingOfferDesc">Comece agora e avance com direção e estratégia.</span>'''
+          new='''<span class="offer-meta" data-i18n="trainingOfferMeta">90 aulas + 6 encontros ao vivo</span><span class="offer-meta" data-i18n="trainingOfferPrice">🇧🇷 12x de R$ 31,03 • 🇪🇺 € 65,34</span><span class="desc" data-i18n="trainingOfferDesc">Comece agora e avance com direção e estratégia.</span>'''
+          s=s.replace(old,new,1)
+          s=s.replace("trainingOfferMeta:'90 aulas + 6 encontros ao vivo',trainingOfferDesc", "trainingOfferMeta:'90 aulas + 6 encontros ao vivo',trainingOfferPrice:'🇧🇷 12x de R$ 31,03 • 🇪🇺 € 65,34',trainingOfferDesc",1)
+          s=s.replace("trainingOfferMeta:'90 cours + 6 rencontres en direct',trainingOfferDesc", "trainingOfferMeta:'90 cours + 6 rencontres en direct',trainingOfferPrice:'🇧🇷 12x de R$ 31,03 • 🇪🇺 65,34 €',trainingOfferDesc",1)
+          s=s.replace("trainingOfferMeta:'90 lessons + 6 live sessions',trainingOfferDesc", "trainingOfferMeta:'90 lessons + 6 live sessions',trainingOfferPrice:'🇧🇷 12x R$ 31.03 • 🇪🇺 €65.34',trainingOfferDesc",1)
+          s=s.replace("trainingOfferMeta:'90 clases + 6 encuentros en vivo',trainingOfferDesc", "trainingOfferMeta:'90 clases + 6 encuentros en vivo',trainingOfferPrice:'🇧🇷 12x de R$ 31,03 • 🇪🇺 € 65,34',trainingOfferDesc",1)
+          p.write_text(s)
+          PY
+      - name: Commit bio price update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bio/index.html
+          git diff --cached --quiet || git commit -m "feat: show training price on bio"
+          git push

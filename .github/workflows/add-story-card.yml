@@ -1,0 +1,58 @@
+name: Add story card
+on:
+  push:
+    paths:
+      - '.github/workflows/add-story-card.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add story continuation card
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('bio/index.html')
+          s=p.read_text()
+
+          css_anchor='.card.training-offer{background:linear-gradient(135deg,#F97316,#EA580C,#DC2626);border-color:#ffffff38;color:#fff}'
+          css_add='.card.story-card{background:linear-gradient(135deg,#4b0f24,#711b38);border-color:#d8b56a;color:#fff;box-shadow:0 12px 32px #0004}.story-card .desc{color:#f8e9df}.story-card .icon{background:#d8b56a22}.story-card .offer-cta{background:#d8b56a;color:#24130a;border-color:#f1d79a}'
+          if css_add not in s:
+              assert css_anchor in s, 'CSS anchor not found'
+              s=s.replace(css_anchor, css_anchor+css_add,1)
+
+          html_anchor='<a class="card training-offer" id="training-primary-link"'
+          card='''<a class="card story-card" href="https://painel.ldrrhestrategia.com/" target="_blank" rel="noopener"><span class="icon">📖</span><span class="copy"><span class="title" data-i18n="storyTitle">Continue minha história</span><span class="desc" data-i18n="storyDesc">Da Bahia à Europa, do porta em porta à construção dos meus negócios.</span><span class="offer-cta" data-i18n="storyCta">CONTINUAR LENDO</span></span><span class="arrow">↗</span></a>\n'''
+          if 'data-i18n="storyTitle"' not in s:
+              assert html_anchor in s, 'HTML anchor not found'
+              s=s.replace(html_anchor,card+html_anchor,1)
+
+          langs=[
+            ("storyTitle:'Continue minha história',storyDesc:'Da Bahia à Europa, do porta em porta à construção dos meus negócios.',storyCta:'CONTINUAR LENDO',"),
+            ("storyTitle:'Continuez mon histoire',storyDesc:'De Bahia à l’Europe, du porte-à-porte à la construction de mes projets et entreprises.',storyCta:'CONTINUER À LIRE',"),
+            ("storyTitle:'Continue my story',storyDesc:'From Bahia to Europe, from door-to-door selling to building my businesses.',storyCta:'CONTINUE READING',"),
+            ("storyTitle:'Continúa mi historia',storyDesc:'De Bahía a Europa, de la venta puerta a puerta a la construcción de mis negocios.',storyCta:'SEGUIR LEYENDO',"),
+          ]
+          marker='trainingOfferTitle:'
+          positions=[]
+          start=0
+          for _ in range(4):
+              i=s.find(marker,start)
+              assert i!=-1, 'translation marker missing'
+              positions.append(i)
+              start=i+len(marker)
+          # insert backwards so indices stay valid
+          for i,prefix in reversed(list(zip(positions,langs))):
+              if s[max(0,i-220):i].find('storyTitle:')==-1:
+                  s=s[:i]+prefix+s[i:]
+
+          p.write_text(s)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add bio/index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'feat: add continue story card to bio'
+          git push

@@ -1,0 +1,56 @@
+name: Add social clinic card
+on:
+  push:
+    paths:
+      - '.github/workflows/add-social-clinic-card.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Add social clinic card only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('bio/index.html')
+          s=p.read_text()
+          old=s
+
+          css_marker='.card.psycho-training{background:linear-gradient(135deg,#32155c,#4b227a);border-color:#caa85d;color:#fff;box-shadow:0 12px 32px #0004}'
+          clinic_css='.card.social-clinic{background:linear-gradient(135deg,#0b1428,#5b0824);border-color:#c9a63a;color:#fff;box-shadow:0 12px 32px #0004}.social-clinic .desc{color:#f7efe2}.social-clinic .icon{background:#c9a63a22}.social-clinic .offer-cta{background:#c9a63a;color:#1b1520;border-color:#ead88d}.social-clinic .arrow{color:#f7efe2}'
+          if clinic_css not in s:
+              if css_marker not in s: raise SystemExit('Clinic CSS marker missing')
+              s=s.replace(css_marker,css_marker+clinic_css,1)
+
+          psycho='''<a class="card psycho-training" href="https://painel.ldrrhestrategia.com/formacao-psicanalise" target="_blank" rel="noopener"><span class="icon">🧠</span><span class="copy"><span class="title" data-i18n="psychoTrainingTitle">Formação Online em Psicanálise</span><span class="offer-meta" data-i18n="psychoTrainingMeta">12 módulos + 6 encontros ao vivo</span><span class="offer-meta" data-i18n="psychoTrainingPrice">🇧🇷 R$ 299,99 • 🇪🇺 € 49,90</span><span class="desc" data-i18n="psychoTrainingDesc">Venha fazer parte de uma formação completa em Psicanálise, com estudo, prática e acompanhamento.</span><span class="offer-cta" data-i18n="psychoTrainingCta">VENHA FAZER PARTE DA FORMAÇÃO</span></span><span class="arrow">↗</span></a>'''
+          clinic='''\n<a class="card social-clinic" href="https://painel.ldrrhestrategia.com/clinica-social" target="_blank" rel="noopener"><span class="icon">🤍</span><span class="copy"><span class="title" data-i18n="socialClinicTitle">Clínica Social LDR de Psicanálise</span><span class="desc" data-i18n="socialClinicDesc">Um espaço de escuta com valor social para quem deseja iniciar ou continuar seu processo de análise.</span><span class="offer-cta" data-i18n="socialClinicCta">CONHECER A CLÍNICA SOCIAL</span></span><span class="arrow">↗</span></a>'''
+          if 'class="card social-clinic"' not in s:
+              if psycho not in s: raise SystemExit('Psycho card marker missing')
+              s=s.replace(psycho,psycho+clinic,1)
+
+          reps={
+            "psychoTrainingCta:'VENHA FAZER PARTE DA FORMAÇÃO'":"psychoTrainingCta:'VENHA FAZER PARTE DA FORMAÇÃO',socialClinicTitle:'Clínica Social LDR de Psicanálise',socialClinicDesc:'Um espaço de escuta com valor social para quem deseja iniciar ou continuar seu processo de análise.',socialClinicCta:'CONHECER A CLÍNICA SOCIAL'",
+            "psychoTrainingCta:'REJOINDRE LA FORMATION'":"psychoTrainingCta:'REJOINDRE LA FORMATION',socialClinicTitle:'Clinique Sociale LDR de Psychanalyse',socialClinicDesc:'Un espace d’écoute à tarif social pour commencer ou poursuivre un processus d’analyse.',socialClinicCta:'DÉCOUVRIR LA CLINIQUE SOCIALE'",
+            "psychoTrainingCta:'JOIN THE TRAINING'":"psychoTrainingCta:'JOIN THE TRAINING',socialClinicTitle:'LDR Social Psychoanalysis Clinic',socialClinicDesc:'A listening space with a social-rate option for people who want to begin or continue psychoanalysis.',socialClinicCta:'DISCOVER THE SOCIAL CLINIC'",
+            "psychoTrainingCta:'FORMA PARTE DE LA FORMACIÓN'":"psychoTrainingCta:'FORMA PARTE DE LA FORMACIÓN',socialClinicTitle:'Clínica Social LDR de Psicoanálisis',socialClinicDesc:'Un espacio de escucha con valor social para quienes desean iniciar o continuar su proceso de análisis.',socialClinicCta:'CONOCER LA CLÍNICA SOCIAL'",
+          }
+          for a,b in reps.items():
+              if a in s and b not in s: s=s.replace(a,b,1)
+
+          if s==old: raise SystemExit('No changes made')
+          p.write_text(s)
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html
+          git diff --cached --check
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "feat: add social clinic card to bio"
+          git push origin main

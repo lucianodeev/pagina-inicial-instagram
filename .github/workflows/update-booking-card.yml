@@ -1,4 +1,4 @@
-name: Update Luciano booking card
+name: Update written psychoanalytic orientation card
 
 on:
   push:
@@ -17,35 +17,42 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Update booking card copy
+      - name: Replace career guidance with written psychoanalytic orientation
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
+
           p = Path('bio/index.html')
           text = p.read_text(encoding='utf-8')
 
+          new_card = '''<a class="sale-card career" href="https://learn.lucianoconecta.online/cliente/orientacao-psicanalitica" target="_blank" rel="noopener"><span class="sale-icon">✍️</span><span class="copy"><span class="badge" data-i18n="careerGuideBadge">NOVO SERVIÇO · POR TEXTO</span><span class="title" data-i18n="careerGuideTitle">Orientação Psicanalítica Escrita</span><span class="price" data-i18n="careerGuidePrice">Promoção · a partir de 🇧🇷 R$ 5,35 · 🇪🇺 € 0,90</span><span class="renewal" data-i18n="careerGuideMeta">Pacotes de 10, 30 ou 60 minutos.</span><span class="desc" data-i18n="careerGuideDesc">Orientação breve, privada e por escrito, com fundamentação psicanalítica e referências científicas quando pertinente.</span><span class="action" data-i18n="careerGuideCta">INICIAR ORIENTAÇÃO ESCRITA</span></span><span class="arrow">↗</span></a>'''
+
+          text, n = re.subn(r'<a class="sale-card career"[^\n]*</a>', new_card, text, count=1)
+          if n != 1:
+            raise SystemExit('Card de orientação profissional não encontrado.')
+
           replacements = {
-            "<span class=\"title\" data-i18n=\"bookTitle\">Quero agendar com Luciano</span><span class=\"desc\" data-i18n=\"bookDesc\">Veja meu perfil, serviços disponíveis e opções de atendimento.</span>":
-            "<span class=\"title\" data-i18n=\"bookTitle\">Agendar com Luciano Rodrigues</span><span class=\"desc\" data-i18n=\"bookDesc\">CEO • Psicanalista • Gestor de RH e Projetos — veja o perfil e agende seu atendimento.</span>",
+            'careerGuideTitle:"Orientação Profissional e de Carreira",careerGuideDesc:"Para quem precisa organizar decisões, reposicionar a carreira, entender possibilidades ou construir um próximo passo mais claro.",careerGuideCta:"QUERO ORIENTAÇÃO"':
+            'careerGuideBadge:"NOVO SERVIÇO · POR TEXTO",careerGuideTitle:"Orientação Psicanalítica Escrita",careerGuidePrice:"Promoção · a partir de 🇧🇷 R$ 5,35 · 🇪🇺 € 0,90",careerGuideMeta:"Pacotes de 10, 30 ou 60 minutos.",careerGuideDesc:"Orientação breve, privada e por escrito, com fundamentação psicanalítica e referências científicas quando pertinente.",careerGuideCta:"INICIAR ORIENTAÇÃO ESCRITA"',
 
-            "bookTitle:'Quero agendar com Luciano',bookDesc:'Veja meu perfil, serviços disponíveis e opções de atendimento.'":
-            "bookTitle:'Agendar com Luciano Rodrigues',bookDesc:'CEO • Psicanalista • Gestor de RH e Projetos — veja o perfil e agende seu atendimento.'",
+            'careerGuideTitle:"Professional & Career Guidance",careerGuideDesc:"For those who need to organize decisions, reposition their career, explore options or build a clearer next step.",careerGuideCta:"I WANT GUIDANCE"':
+            'careerGuideBadge:"NEW SERVICE · BY TEXT",careerGuideTitle:"Written Psychoanalytic Guidance",careerGuidePrice:"Launch offer · from 🇧🇷 R$ 5.35 · 🇪🇺 € 0.90",careerGuideMeta:"10, 30 or 60 minute packages.",careerGuideDesc:"Brief, private written guidance grounded in psychoanalysis, with scientific references when appropriate.",careerGuideCta:"START WRITTEN GUIDANCE"',
 
-            "bookTitle:'Prendre rendez-vous avec Luciano',bookDesc:'Découvrez mon profil, mes services et les possibilités de rendez-vous.'":
-            "bookTitle:'Prendre rendez-vous avec Luciano Rodrigues',bookDesc:'CEO • Psychanalyste • RH & Gestion de projets — découvrez le profil et réservez votre rendez-vous.'",
+            'careerGuideTitle:"Orientation professionnelle et carrière",careerGuideDesc:"Pour organiser vos décisions, repositionner votre carrière, explorer des possibilités ou construire une prochaine étape plus claire.",careerGuideCta:"JE VEUX UNE ORIENTATION"':
+            'careerGuideBadge:"NOUVEAU SERVICE · PAR TEXTE",careerGuideTitle:"Orientation Psychanalytique Écrite",careerGuidePrice:"Offre de lancement · dès 🇧🇷 R$ 5,35 · 🇪🇺 0,90 €",careerGuideMeta:"Forfaits de 10, 30 ou 60 minutes.",careerGuideDesc:"Orientation brève, privée et écrite, fondée sur la psychanalyse, avec références scientifiques lorsque pertinent.",careerGuideCta:"COMMENCER L’ORIENTATION ÉCRITE"',
 
-            "bookTitle:'Book with Luciano',bookDesc:'View my professional profile, services and appointment options.'":
-            "bookTitle:'Book with Luciano Rodrigues',bookDesc:'CEO • Psychoanalyst • HR & Project Manager — view the profile and book your appointment.'",
-
-            "bookTitle:'Agendar con Luciano',bookDesc:'Consulta mi perfil profesional, servicios disponibles y opciones de atención.'":
-            "bookTitle:'Agendar con Luciano Rodrigues',bookDesc:'CEO • Psicoanalista • RR. HH. y Gestión de Proyectos — consulta el perfil y agenda tu atención.'"
+            'careerGuideTitle:"Orientación Profesional y de Carrera",careerGuideDesc:"Para organizar decisiones, reposicionar tu carrera, explorar posibilidades o construir un siguiente paso más claro.",careerGuideCta:"QUIERO ORIENTACIÓN"':
+            'careerGuideBadge:"NUEVO SERVICIO · POR TEXTO",careerGuideTitle:"Orientación Psicoanalítica Escrita",careerGuidePrice:"Oferta de lanzamiento · desde 🇧🇷 R$ 5,35 · 🇪🇺 € 0,90",careerGuideMeta:"Paquetes de 10, 30 o 60 minutos.",careerGuideDesc:"Orientación breve, privada y por escrito, con base psicoanalítica y referencias científicas cuando corresponda.",careerGuideCta:"INICIAR ORIENTACIÓN ESCRITA"'
           }
 
           for old, new in replacements.items():
             if old not in text:
-              raise SystemExit(f'Expected text not found: {old[:80]}')
+              raise SystemExit(f'Tradução esperada não encontrada: {old[:70]}')
             text = text.replace(old, new, 1)
 
+          text = text.replace('orientação profissional, Clínica Social', 'orientação psicanalítica escrita, Clínica Social')
+          text = text.replace('assinaturas, orientação profissional, Clínica Social', 'assinaturas, orientação psicanalítica escrita, Clínica Social')
           p.write_text(text, encoding='utf-8')
           PY
 
@@ -54,5 +61,5 @@ jobs:
           git config user.name "ldr-rh-campanhas"
           git config user.email "llucianouam@gmail.com"
           git add bio/index.html
-          git commit -m "feat: prioritize Luciano booking CTA" || exit 0
+          git commit -m "feat: promote written psychoanalytic orientation" || exit 0
           git push origin main

@@ -1,0 +1,57 @@
+name: Replace training cards with library subscription
+on:
+  push:
+    paths:
+      - '.github/workflows/replace-training-cards-with-library-subscription.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Update bio subscription card only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('bio/index.html')
+          s=p.read_text(encoding='utf-8')
+          old=s
+
+          css_marker='.card.social-clinic{background:linear-gradient(135deg,#0b1428,#5b0824);border-color:#c9a63a;color:#fff;box-shadow:0 12px 32px #0004}'
+          library_css='.card.library-subscription{background:linear-gradient(135deg,#4b0f24,#711b38,#5b0824);border-color:#d8b56a;color:#fff;box-shadow:0 14px 34px #0005}.library-subscription .desc{color:#f8e9df}.library-subscription .icon{background:#d8b56a22}.library-subscription .offer-cta{background:#d8b56a;color:#24130a;border-color:#f1d79a}.library-subscription .arrow{color:#f8e9df}.promo-badge{display:inline-block;margin:0 0 7px;padding:5px 9px;border-radius:999px;background:#ffd84d;color:#4b0f24;font-size:10px;font-weight:1000;letter-spacing:.04em}.library-price{display:block;margin-top:5px;color:#fff;font-size:15px;font-weight:1000;line-height:1.35}.library-renewal{display:block;margin-top:6px;color:#f8e9df;font-size:11px;line-height:1.45;font-weight:700}'
+          if library_css not in s:
+              if css_marker not in s: raise SystemExit('CSS marker missing')
+              s=s.replace(css_marker,css_marker+library_css,1)
+
+          entrepreneur='''<a class="card training-offer" id="training-primary-link" href="https://painel.ldrrhestrategia.com/" target="_blank" rel="noopener" onclick="this.href='https://painel.ldrrhestrategia.com/'"><span class="icon">🎓</span><span class="copy"><span class="title" data-i18n="trainingOfferTitle">Formação para Empreendedores</span><span class="offer-meta" data-i18n="trainingOfferMeta">90 aulas + 6 encontros ao vivo</span><span class="offer-meta" data-i18n="trainingOfferPrice">🇧🇷 R$ 299,99 • 🇪🇺 € 49,90</span><span class="desc" data-i18n="trainingOfferDesc">Comece agora e avance com direção e estratégia.</span><span class="offer-cta" data-i18n="trainingOfferCta">CONHECER A FORMAÇÃO</span></span><span class="arrow">↗</span></a>'''
+          psycho='''<a class="card psycho-training" href="https://painel.ldrrhestrategia.com/formacao-psicanalise" target="_blank" rel="noopener"><span class="icon">🧠</span><span class="copy"><span class="title" data-i18n="psychoTrainingTitle">Formação Online em Psicanálise</span><span class="offer-meta" data-i18n="psychoTrainingMeta">12 módulos + 6 encontros ao vivo</span><span class="offer-meta" data-i18n="psychoTrainingPrice">🇧🇷 R$ 299,99 • 🇪🇺 € 49,90</span><span class="desc" data-i18n="psychoTrainingDesc">Venha fazer parte de uma formação completa em Psicanálise, com estudo, prática e acompanhamento.</span><span class="offer-cta" data-i18n="psychoTrainingCta">VENHA FAZER PARTE DA FORMAÇÃO</span></span><span class="arrow">↗</span></a>'''
+          library='''<a class="card library-subscription" href="https://painel.ldrrhestrategia.com/" target="_blank" rel="noopener"><span class="icon">📚</span><span class="copy"><span class="promo-badge" data-i18n="libraryPromo">⚡ PROMOÇÃO DE 24 HORAS · 50% NO PRIMEIRO MÊS</span><span class="title" data-i18n="libraryTitle">Assinatura da Biblioteca LDR</span><span class="library-price" data-i18n="libraryPrice">🇧🇷 R$ 19,95 · 🇪🇺 € 4,95</span><span class="library-renewal" data-i18n="libraryRenewal">A partir do segundo mês: R$ 39,90/mês ou € 9,90/mês. Cancele quando quiser.</span><span class="desc" data-i18n="libraryDesc">Acesse conteúdos, formações e materiais exclusivos em um só lugar.</span><span class="offer-cta" data-i18n="libraryCta">ASSINAR A BIBLIOTECA</span></span><span class="arrow">↗</span></a>'''
+          block=entrepreneur+'\n'+psycho
+          if block not in s: raise SystemExit('Training card block not found')
+          s=s.replace(block,library,1)
+
+          reps={
+            "socialClinicCta:'CONHECER A CLÍNICA SOCIAL'":"socialClinicCta:'CONHECER A CLÍNICA SOCIAL',libraryPromo:'⚡ PROMOÇÃO DE 24 HORAS · 50% NO PRIMEIRO MÊS',libraryTitle:'Assinatura da Biblioteca LDR',libraryPrice:'🇧🇷 R$ 19,95 · 🇪🇺 € 4,95',libraryRenewal:'A partir do segundo mês: R$ 39,90/mês ou € 9,90/mês. Cancele quando quiser.',libraryDesc:'Acesse conteúdos, formações e materiais exclusivos em um só lugar.',libraryCta:'ASSINAR A BIBLIOTECA'",
+            "socialClinicCta:'DÉCOUVRIR LA CLINIQUE SOCIALE'":"socialClinicCta:'DÉCOUVRIR LA CLINIQUE SOCIALE',libraryPromo:'⚡ PROMOTION 24 HEURES · -50 % LE PREMIER MOIS',libraryTitle:'Abonnement à la Bibliothèque LDR',libraryPrice:'🇧🇷 19,95 R$ · 🇪🇺 4,95 €',libraryRenewal:'À partir du deuxième mois : 39,90 R$/mois ou 9,90 €/mois. Annulez à tout moment.',libraryDesc:'Accédez à des contenus, formations et ressources exclusives au même endroit.',libraryCta:'S’ABONNER À LA BIBLIOTHÈQUE'",
+            "socialClinicCta:'DISCOVER THE SOCIAL CLINIC'":"socialClinicCta:'DISCOVER THE SOCIAL CLINIC',libraryPromo:'⚡ 24-HOUR PROMOTION · 50% OFF THE FIRST MONTH',libraryTitle:'LDR Library Subscription',libraryPrice:'🇧🇷 R$ 19.95 · 🇪🇺 € 4.95',libraryRenewal:'From the second month: R$ 39.90/month or € 9.90/month. Cancel anytime.',libraryDesc:'Access exclusive content, training and materials in one place.',libraryCta:'SUBSCRIBE TO THE LIBRARY'",
+            "socialClinicCta:'CONOCER LA CLÍNICA SOCIAL'":"socialClinicCta:'CONOCER LA CLÍNICA SOCIAL',libraryPromo:'⚡ PROMOCIÓN DE 24 HORAS · 50% EN EL PRIMER MES',libraryTitle:'Suscripción a la Biblioteca LDR',libraryPrice:'🇧🇷 R$ 19,95 · 🇪🇺 4,95 €',libraryRenewal:'Desde el segundo mes: R$ 39,90/mes o 9,90 €/mes. Cancela cuando quieras.',libraryDesc:'Accede a contenidos, formaciones y materiales exclusivos en un solo lugar.',libraryCta:'SUSCRIBIRME A LA BIBLIOTECA'"
+          }
+          for a,b in reps.items():
+              if a in s and b not in s: s=s.replace(a,b,1)
+
+          if s==old: raise SystemExit('No changes made')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit change
+        run: |
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html
+          git diff --cached --check
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "feat: replace training cards with library subscription"
+          git push origin main

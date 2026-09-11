@@ -1,0 +1,47 @@
+name: Fix bio training price and story color
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-bio-training-price-story-color.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply requested bio card changes only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('bio/index.html')
+          s=p.read_text()
+          old=s
+
+          # Story card: wine -> premium navy, preserve gold accents and all behavior/content.
+          s=s.replace('.card.story-card{background:linear-gradient(135deg,#4b0f24,#711b38);border-color:#d8b56a;color:#fff;box-shadow:0 12px 32px #0004}',
+                      '.card.story-card{background:linear-gradient(135deg,#0b1b31,#17345d);border-color:#d8b56a;color:#fff;box-shadow:0 12px 32px #0004}')
+          s=s.replace('.story-card .desc{color:#f8e9df}', '.story-card .desc{color:#e8eef7}')
+
+          # Entrepreneur training EUR price: 65,34 -> 49,90 in visible card and translations only.
+          s=s.replace('🇧🇷 R$ 299,99 • 🇪🇺 € 65,34','🇧🇷 R$ 299,99 • 🇪🇺 € 49,90')
+          s=s.replace('🇧🇷 299,99 R$ • 🇪🇺 65,34 €','🇧🇷 299,99 R$ • 🇪🇺 49,90 €')
+          s=s.replace('🇧🇷 R$299.99 • 🇪🇺 €65.34','🇧🇷 R$299.99 • 🇪🇺 €49.90')
+          s=s.replace('🇧🇷 R$ 299,99 • 🇪🇺 65,34 €','🇧🇷 R$ 299,99 • 🇪🇺 49,90 €')
+
+          if s==old:
+              raise SystemExit('No changes made')
+          p.write_text(s)
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html
+          git diff --cached --check
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "fix: update entrepreneur euro price and story card color"
+          git push origin main

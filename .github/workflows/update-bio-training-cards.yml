@@ -1,0 +1,71 @@
+name: Update bio training cards
+on:
+  push:
+    paths:
+      - '.github/workflows/update-bio-training-cards.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Update only training cards in bio
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('bio/index.html')
+          s=p.read_text()
+          old=s
+
+          # Entrepreneur card: orange -> wine, preserving structure and behavior.
+          s=s.replace('.card.training-offer{background:linear-gradient(135deg,#F97316,#EA580C,#DC2626);border-color:#ffffff38;color:#fff}',
+                      '.card.training-offer{background:linear-gradient(135deg,#4b0f24,#711b38,#5b0824);border-color:#d8b56a;color:#fff}')
+          s=s.replace('.training-offer .desc{color:#FFF7ED}.training-offer .icon{background:#ffffff20}.training-offer .arrow{color:#FFF7ED}',
+                      '.training-offer .desc{color:#f8e9df}.training-offer .icon{background:#d8b56a22}.training-offer .arrow{color:#f8e9df}')
+
+          # Psychoanalysis training card uses the official page palette (#32155c / #caa85d).
+          css_marker='.card.story-card{background:linear-gradient(135deg,#4b0f24,#711b38);border-color:#d8b56a;color:#fff;box-shadow:0 12px 32px #0004}'
+          psycho_css='.card.psycho-training{background:linear-gradient(135deg,#32155c,#4b227a);border-color:#caa85d;color:#fff;box-shadow:0 12px 32px #0004}.psycho-training .desc{color:#f4ecff}.psycho-training .icon{background:#caa85d22}.psycho-training .offer-cta{background:#caa85d;color:#241238;border-color:#e4cf91}.psycho-training .arrow{color:#f4ecff}'
+          if psycho_css not in s:
+              if css_marker not in s: raise SystemExit('CSS marker missing')
+              s=s.replace(css_marker,css_marker+psycho_css,1)
+
+          # One-time price display on entrepreneur card.
+          s=s.replace('🇧🇷 12x de R$ 31,03 • 🇪🇺 € 65,34','🇧🇷 R$ 299,99 • 🇪🇺 € 65,34')
+          s=s.replace('🇧🇷 12x de R$ 31,03 • 🇪🇺 65,34 €','🇧🇷 299,99 R$ • 🇪🇺 65,34 €')
+          s=s.replace('🇧🇷 12x R$ 31.03 • 🇪🇺 €65.34','🇧🇷 R$299.99 • 🇪🇺 €65.34')
+          s=s.replace('🇧🇷 12x de R$ 31,03 • 🇪🇺 65,34 €','🇧🇷 R$ 299,99 • 🇪🇺 65,34 €')
+
+          # Add psychoanalysis card directly after entrepreneur training card.
+          entrepreneur='''<a class="card training-offer" id="training-primary-link" href="https://painel.ldrrhestrategia.com/" target="_blank" rel="noopener" onclick="this.href='https://painel.ldrrhestrategia.com/'"><span class="icon">🎓</span><span class="copy"><span class="title" data-i18n="trainingOfferTitle">Formação para Empreendedores</span><span class="offer-meta" data-i18n="trainingOfferMeta">90 aulas + 6 encontros ao vivo</span><span class="offer-meta" data-i18n="trainingOfferPrice">🇧🇷 R$ 299,99 • 🇪🇺 € 65,34</span><span class="desc" data-i18n="trainingOfferDesc">Comece agora e avance com direção e estratégia.</span><span class="offer-cta" data-i18n="trainingOfferCta">CONHECER A FORMAÇÃO</span></span><span class="arrow">↗</span></a>'''
+          psycho='''\n<a class="card psycho-training" href="https://painel.ldrrhestrategia.com/formacao-psicanalise" target="_blank" rel="noopener"><span class="icon">🧠</span><span class="copy"><span class="title" data-i18n="psychoTrainingTitle">Formação Online em Psicanálise</span><span class="offer-meta" data-i18n="psychoTrainingMeta">12 módulos + 6 encontros ao vivo</span><span class="offer-meta" data-i18n="psychoTrainingPrice">🇧🇷 R$ 299,99 • 🇪🇺 € 49,90</span><span class="desc" data-i18n="psychoTrainingDesc">Venha fazer parte de uma formação completa em Psicanálise, com estudo, prática e acompanhamento.</span><span class="offer-cta" data-i18n="psychoTrainingCta">VENHA FAZER PARTE DA FORMAÇÃO</span></span><span class="arrow">↗</span></a>'''
+          if 'class="card psycho-training"' not in s:
+              if entrepreneur not in s: raise SystemExit('Entrepreneur card marker missing after price update')
+              s=s.replace(entrepreneur, entrepreneur+psycho, 1)
+
+          # Add translations beside the existing training CTA keys.
+          reps={
+            "trainingOfferCta:'CONHECER A FORMAÇÃO'":"trainingOfferCta:'CONHECER A FORMAÇÃO',psychoTrainingTitle:'Formação Online em Psicanálise',psychoTrainingMeta:'12 módulos + 6 encontros ao vivo',psychoTrainingPrice:'🇧🇷 R$ 299,99 • 🇪🇺 € 49,90',psychoTrainingDesc:'Venha fazer parte de uma formação completa em Psicanálise, com estudo, prática e acompanhamento.',psychoTrainingCta:'VENHA FAZER PARTE DA FORMAÇÃO'",
+            "trainingOfferCta:'DÉCOUVRIR LA FORMATION'":"trainingOfferCta:'DÉCOUVRIR LA FORMATION',psychoTrainingTitle:'Formation en ligne en Psychanalyse',psychoTrainingMeta:'12 modules + 6 rencontres en direct',psychoTrainingPrice:'🇧🇷 299,99 R$ • 🇪🇺 49,90 €',psychoTrainingDesc:'Rejoignez une formation complète en psychanalyse, avec étude, pratique et accompagnement.',psychoTrainingCta:'REJOINDRE LA FORMATION'",
+            "trainingOfferCta:'DISCOVER THE TRAINING'":"trainingOfferCta:'DISCOVER THE TRAINING',psychoTrainingTitle:'Online Psychoanalysis Training',psychoTrainingMeta:'12 modules + 6 live sessions',psychoTrainingPrice:'🇧🇷 R$299.99 • 🇪🇺 €49.90',psychoTrainingDesc:'Join a complete Psychoanalysis training experience with study, practice and guided support.',psychoTrainingCta:'JOIN THE TRAINING'",
+            "trainingOfferCta:'CONOCER LA FORMACIÓN'":"trainingOfferCta:'CONOCER LA FORMACIÓN',psychoTrainingTitle:'Formación Online en Psicoanálisis',psychoTrainingMeta:'12 módulos + 6 encuentros en vivo',psychoTrainingPrice:'🇧🇷 R$ 299,99 • 🇪🇺 49,90 €',psychoTrainingDesc:'Forma parte de una formación completa en Psicoanálisis, con estudio, práctica y acompañamiento.',psychoTrainingCta:'FORMA PARTE DE LA FORMACIÓN'",
+          }
+          for a,b in reps.items():
+              if a in s and b not in s: s=s.replace(a,b,1)
+
+          if s==old: raise SystemExit('No changes made')
+          p.write_text(s)
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html
+          git diff --cached --check
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "feat: update bio training cards"
+          git push origin main

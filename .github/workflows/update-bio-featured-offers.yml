@@ -1,0 +1,68 @@
+name: Update Bio Featured Offers
+
+on:
+  push:
+    paths:
+      - '.github/workflows/update-bio-featured-offers.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update bio featured offers
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('bio/index.html')
+          s = p.read_text(encoding='utf-8')
+
+          marker = 'id="featured-offers"'
+          if marker not in s:
+              css = '''\n.featured-offers{margin-top:24px}.featured-offers .section-head{text-align:left}.featured-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.featured-offer{position:relative;overflow:hidden;display:flex;gap:14px;align-items:flex-start;padding:22px;border-radius:24px;text-decoration:none;color:#fff;border:1px solid #ffffff28;box-shadow:0 16px 42px #0004;transition:.18s ease;min-height:220px}.featured-offer:after{content:"";position:absolute;width:190px;height:190px;border-radius:50%;right:-90px;top:-90px;background:#fff1;pointer-events:none}.featured-offer.massage-feature{background:linear-gradient(145deg,#0b3654,#126f8f,#eaf7fb22);border-color:#74cbe1}.featured-offer.academy-feature{background:linear-gradient(145deg,#09162a,#17345d,#8b6b2c);border-color:#d8b56a}.featured-offer .sale-icon{width:48px;height:48px;flex-basis:48px;font-size:22px}.featured-offer .title{font-size:19px}.featured-offer .price{font-size:17px;margin-top:9px}.featured-offer .renewal{font-size:12px}.featured-offer .desc{font-size:13px;margin-top:8px}.featured-offer .action{font-size:11px;padding:9px 13px;margin-top:13px}.featured-offer.massage-feature .action{background:#25D366;color:#061a0c;border-color:#65e58f}.featured-offer:hover{transform:translateY(-2px)}\n'''
+              s = s.replace('@media(max-width:560px){', css + '@media(max-width:560px){', 1)
+              s = s.replace('.sales-grid,.services,.social-grid{grid-template-columns:1fr}', '.sales-grid,.services,.social-grid,.featured-grid{grid-template-columns:1fr}', 1)
+
+              section = '''\n<section class="section featured-offers" id="featured-offers" aria-labelledby="featured-title">\n<div class="section-head"><div class="section-kicker" data-i18n="featuredKicker">DESTAQUES</div><h2 id="featured-title" data-i18n="featuredTitle">Escolha seu próximo passo</h2></div>\n<div class="featured-grid">\n<a class="featured-offer massage-feature" href="https://wa.me/32492923605?text=Ol%C3%A1%2C%20vi%20a%20massagem%20na%20bio%20do%20Luciano%20e%20gostaria%20de%20verificar%20os%20hor%C3%A1rios%20dispon%C3%ADveis%20em%20Schaerbeek." target="_blank" rel="noopener"><span class="sale-icon">💆</span><span class="copy"><span class="badge" data-i18n="massageBadge">📍 SCHAERBEEK · BRUXELAS</span><span class="title" data-i18n="featuredMassageTitle">Massagem para Homens em Schaerbeek</span><span class="price" data-i18n="featuredMassagePrice">Relaxante €120 · Sensível €150</span><span class="desc" data-i18n="featuredMassageDesc">Atendimento presencial para adultos, com horário marcado em Schaerbeek, Bruxelas.</span><span class="action" data-i18n="featuredMassageCta">AGENDAR PELO WHATSAPP</span></span><span class="arrow">↗</span></a>\n<a class="featured-offer academy-feature" href="https://ldracademy.online/" target="_blank" rel="noopener"><span class="sale-icon">🎓</span><span class="copy"><span class="badge" data-i18n="academyBadge">LDR ACADEMY</span><span class="title" data-i18n="academyTitle">Formações, cursos e biblioteca em um só lugar</span><span class="price" data-i18n="academyPrice">🇧🇷 R$ 19,95 · 🇪🇺 € 4,95 no primeiro mês</span><span class="renewal" data-i18n="academyRenewal">Depois: R$ 39,90/mês ou € 9,90/mês. Cancele quando quiser.</span><span class="desc" data-i18n="academyDesc">Cursos, formações, biblioteca digital e conteúdos para carreira, negócios e desenvolvimento.</span><span class="action" data-i18n="academyCta">CONHECER A LDR ACADEMY</span></span><span class="arrow">↗</span></a>\n</div>\n</section>\n'''
+              s = s.replace('<section class="section decision">', section + '\n<section class="section decision">', 1)
+
+              translations = {
+                  'pt:{language:': 'pt:{featuredKicker:"DESTAQUES",featuredTitle:"Escolha seu próximo passo",massageBadge:"📍 SCHAERBEEK · BRUXELAS",featuredMassageTitle:"Massagem para Homens em Schaerbeek",featuredMassagePrice:"Relaxante €120 · Sensível €150",featuredMassageDesc:"Atendimento presencial para adultos, com horário marcado em Schaerbeek, Bruxelas.",featuredMassageCta:"AGENDAR PELO WHATSAPP",academyBadge:"LDR ACADEMY",academyTitle:"Formações, cursos e biblioteca em um só lugar",academyPrice:"🇧🇷 R$ 19,95 · 🇪🇺 € 4,95 no primeiro mês",academyRenewal:"Depois: R$ 39,90/mês ou € 9,90/mês. Cancele quando quiser.",academyDesc:"Cursos, formações, biblioteca digital e conteúdos para carreira, negócios e desenvolvimento.",academyCta:"CONHECER A LDR ACADEMY",language:',
+                  'en:{language:': 'en:{featuredKicker:"FEATURED",featuredTitle:"Choose your next step",massageBadge:"📍 SCHAERBEEK · BRUSSELS",featuredMassageTitle:"Massage for Men in Schaerbeek",featuredMassagePrice:"Relaxing €120 · Sensual €150",featuredMassageDesc:"In-person service for adults, by appointment in Schaerbeek, Brussels.",featuredMassageCta:"BOOK ON WHATSAPP",academyBadge:"LDR ACADEMY",academyTitle:"Courses, training and library in one place",academyPrice:"🇧🇷 R$ 19.95 · 🇪🇺 € 4.95 first month",academyRenewal:"Then: R$ 39.90/month or € 9.90/month. Cancel anytime.",academyDesc:"Courses, training, digital library and content for career, business and development.",academyCta:"DISCOVER LDR ACADEMY",language:',
+                  'fr:{language:': 'fr:{featuredKicker:"À LA UNE",featuredTitle:"Choisissez votre prochaine étape",massageBadge:"📍 SCHAERBEEK · BRUXELLES",featuredMassageTitle:"Massage pour hommes à Schaerbeek",featuredMassagePrice:"Relaxant 120 € · Sensuel 150 €",featuredMassageDesc:"Service en présentiel pour adultes, sur rendez-vous à Schaerbeek, Bruxelles.",featuredMassageCta:"RÉSERVER SUR WHATSAPP",academyBadge:"LDR ACADEMY",academyTitle:"Formations, cours et bibliothèque au même endroit",academyPrice:"🇧🇷 R$ 19,95 · 🇪🇺 4,95 € le premier mois",academyRenewal:"Ensuite : R$ 39,90/mois ou 9,90 €/mois. Résiliable à tout moment.",academyDesc:"Cours, formations, bibliothèque numérique et contenus pour carrière, business et développement.",academyCta:"DÉCOUVRIR LDR ACADEMY",language:',
+                  'es:{language:': 'es:{featuredKicker:"DESTACADOS",featuredTitle:"Elige tu próximo paso",massageBadge:"📍 SCHAERBEEK · BRUSELAS",featuredMassageTitle:"Masaje para hombres en Schaerbeek",featuredMassagePrice:"Relajante €120 · Sensual €150",featuredMassageDesc:"Atención presencial para adultos, con cita previa en Schaerbeek, Bruselas.",featuredMassageCta:"RESERVAR POR WHATSAPP",academyBadge:"LDR ACADEMY",academyTitle:"Formaciones, cursos y biblioteca en un solo lugar",academyPrice:"🇧🇷 R$ 19,95 · 🇪🇺 € 4,95 el primer mes",academyRenewal:"Después: R$ 39,90/mes o € 9,90/mes. Cancela cuando quieras.",academyDesc:"Cursos, formaciones, biblioteca digital y contenidos para carrera, negocios y desarrollo.",academyCta:"CONOCER LDR ACADEMY",language:'
+              }
+              for old, new in translations.items():
+                  if old not in s:
+                      raise SystemExit(f'Missing translation anchor: {old}')
+                  s = s.replace(old, new, 1)
+
+              p.write_text(s, encoding='utf-8')
+
+          assert 'id="featured-offers"' in s
+          assert 'https://ldracademy.online/' in s
+          assert 'Relaxante €120 · Sensível €150' in s
+          assert 'academyPrice' in s and 'featuredMassageCta' in s
+          PY
+
+          git diff --check
+          git diff -- bio/index.html
+
+      - name: Commit changes
+        shell: bash
+        run: |
+          if git diff --quiet -- bio/index.html; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html
+          git commit -m "feat: highlight massage and LDR Academy on bio"
+          git push

@@ -1,0 +1,72 @@
+name: Add Bio Mentoria Priority
+
+on:
+  push:
+    paths:
+      - '.github/workflows/add-bio-mentoria-priority.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add Mentoria as fourth priority card only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('bio/index.html')
+          s = p.read_text(encoding='utf-8')
+
+          if 'data-i18n="priorityMentorTitle"' in s:
+              raise SystemExit('Priority Mentoria card already exists')
+
+          section_pat = re.compile(r'(<section class="section" id="destaques-principais".*?<div class="links">)(.*?)(</div>\s*</section>)', re.S)
+          m = section_pat.search(s)
+          if not m:
+              raise SystemExit('Priority section not found')
+          body = m.group(2)
+          if not ('priorityMassageTitle' in body and 'priorityAcademyTitle' in body and 'careerGuideTitle' in body):
+              raise SystemExit('Expected three priority cards are not present')
+
+          mentor = '''\n<a class="card commercial" href="https://ldrrhestrategia.com/mentoria?lang=pt" target="_blank" rel="noopener" id="priority-mentoria-link"><span class="icon">🎯</span><span class="copy"><span class="title" data-i18n="priorityMentorTitle">Mentoria Profissional e de Negócios</span><span class="desc" data-i18n="priorityMentorDesc">Direção estratégica para carreira, projetos e negócios, com foco em clareza, posicionamento e próximos passos.</span><span class="action" data-i18n="priorityMentorCta">CONHECER A MENTORIA</span></span><span class="arrow">↗</span></a>\n'''
+          new_body = body.rstrip() + mentor
+          s = s[:m.start(2)] + new_body + s[m.end(2):]
+
+          translations = {
+            'pt:{':'pt:{priorityMentorTitle:"Mentoria Profissional e de Negócios",priorityMentorDesc:"Direção estratégica para carreira, projetos e negócios, com foco em clareza, posicionamento e próximos passos.",priorityMentorCta:"CONHECER A MENTORIA",',
+            'en:{':'en:{priorityMentorTitle:"Professional & Business Mentoring",priorityMentorDesc:"Strategic direction for career, projects and business, focused on clarity, positioning and next steps.",priorityMentorCta:"DISCOVER MENTORING",',
+            'fr:{':'fr:{priorityMentorTitle:"Mentorat Professionnel et Business",priorityMentorDesc:"Orientation stratégique pour carrière, projets et business, avec un focus sur la clarté, le positionnement et les prochaines étapes.",priorityMentorCta:"DÉCOUVRIR LE MENTORAT",',
+            'es:{':'es:{priorityMentorTitle:"Mentoría Profesional y de Negocios",priorityMentorDesc:"Dirección estratégica para carrera, proyectos y negocios, con foco en claridad, posicionamiento y próximos pasos.",priorityMentorCta:"CONOCER LA MENTORÍA",'
+          }
+          for old,new in translations.items():
+              if old not in s:
+                  raise SystemExit(f'Missing translation anchor {old}')
+              s = s.replace(old,new,1)
+
+          assert s.count('data-i18n="priorityMentorTitle"') == 1
+          assert s.index('priorityMassageTitle') < s.index('priorityAcademyTitle') < s.index('careerGuideTitle') < s.index('priorityMentorTitle')
+          assert 'https://ldrrhestrategia.com/mentoria?lang=pt' in s
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          test "$(git diff --name-only | tr '\n' ' ')" = "bio/index.html "
+          git diff --check
+          grep -q 'priorityMentorTitle' bio/index.html
+          grep -q 'https://ldrrhestrategia.com/mentoria?lang=pt' bio/index.html
+
+      - name: Commit bio only
+        shell: bash
+        run: |
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html
+          git commit -m "feat: add mentoring as fourth priority bio card"
+          git push

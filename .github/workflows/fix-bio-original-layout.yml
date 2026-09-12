@@ -1,0 +1,58 @@
+name: Fix Bio Original Layout
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-bio-original-layout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore original bio and add only two priority cards
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORIGINAL=8cc590b856c411e1309ca152105b75cba7012d92
+          git checkout "$ORIGINAL" -- bio/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('bio/index.html')
+          s=p.read_text(encoding='utf-8')
+          anchor='''<section class="section decision">'''
+          if anchor not in s:
+              raise SystemExit('decision anchor not found')
+          block='''<section class="section" id="destaques-principais" aria-labelledby="destaques-principais-title">\n<div class="section-head"><div class="section-kicker" data-i18n="priorityKicker">DESTAQUES</div><h2 id="destaques-principais-title" data-i18n="priorityTitle">Comece por aqui</h2></div>\n<div class="links">\n<a class="card massage" href="https://wa.me/32492923605?text=Ol%C3%A1%2C%20vi%20a%20massagem%20na%20bio%20do%20Luciano%20e%20gostaria%20de%20verificar%20os%20hor%C3%A1rios%20dispon%C3%ADveis%20em%20Schaerbeek." target="_blank" rel="noopener"><span class="icon">💆</span><span class="copy"><span class="title" data-i18n="priorityMassageTitle">Massagem para Homens em Schaerbeek — Bruxelas</span><span class="price" data-i18n="priorityMassagePrice">Relaxante €120 · Sensível €150</span><span class="desc" data-i18n="priorityMassageDesc">Atendimento presencial para adultos, com horário marcado.</span><span class="action" data-i18n="priorityMassageCta">AGENDAR PELO WHATSAPP</span></span><span class="arrow">↗</span></a>\n<a class="card featured" href="https://ldracademy.online/" target="_blank" rel="noopener"><span class="icon">🎓</span><span class="copy"><span class="title" data-i18n="priorityAcademyTitle">LDR Academy</span><span class="price" style="color:#101827" data-i18n="priorityAcademyPrice">🇧🇷 R$ 19,95 · 🇪🇺 € 4,95 no primeiro mês</span><span class="desc" data-i18n="priorityAcademyDesc">Formações, cursos, biblioteca e conteúdos para carreira e negócios.</span><span class="renewal" style="color:#334155" data-i18n="priorityAcademyRenewal">Depois: R$ 39,90/mês ou € 9,90/mês. Cancele quando quiser.</span><span class="action" data-i18n="priorityAcademyCta">CONHECER A LDR ACADEMY</span></span><span class="arrow">↗</span></a>\n</div>\n</section>\n\n'''
+          s=s.replace(anchor, block+anchor, 1)
+          translations={
+            'pt:{language:':'pt:{priorityKicker:"DESTAQUES",priorityTitle:"Comece por aqui",priorityMassageTitle:"Massagem para Homens em Schaerbeek — Bruxelas",priorityMassagePrice:"Relaxante €120 · Sensível €150",priorityMassageDesc:"Atendimento presencial para adultos, com horário marcado.",priorityMassageCta:"AGENDAR PELO WHATSAPP",priorityAcademyTitle:"LDR Academy",priorityAcademyPrice:"🇧🇷 R$ 19,95 · 🇪🇺 € 4,95 no primeiro mês",priorityAcademyDesc:"Formações, cursos, biblioteca e conteúdos para carreira e negócios.",priorityAcademyRenewal:"Depois: R$ 39,90/mês ou € 9,90/mês. Cancele quando quiser.",priorityAcademyCta:"CONHECER A LDR ACADEMY",language:',
+            'en:{language:':'en:{priorityKicker:"FEATURED",priorityTitle:"Start here",priorityMassageTitle:"Massage for Men in Schaerbeek — Brussels",priorityMassagePrice:"Relaxing €120 · Sensitive €150",priorityMassageDesc:"In-person service for adults, by appointment.",priorityMassageCta:"BOOK ON WHATSAPP",priorityAcademyTitle:"LDR Academy",priorityAcademyPrice:"🇧🇷 R$ 19.95 · 🇪🇺 € 4.95 first month",priorityAcademyDesc:"Courses, training, library and content for career and business.",priorityAcademyRenewal:"Then: R$ 39.90/month or € 9.90/month. Cancel anytime.",priorityAcademyCta:"DISCOVER LDR ACADEMY",language:',
+            'fr:{language:':'fr:{priorityKicker:"À LA UNE",priorityTitle:"Commencez ici",priorityMassageTitle:"Massage pour hommes à Schaerbeek — Bruxelles",priorityMassagePrice:"Relaxant 120 € · Sensible 150 €",priorityMassageDesc:"Service en présentiel pour adultes, sur rendez-vous.",priorityMassageCta:"RÉSERVER SUR WHATSAPP",priorityAcademyTitle:"LDR Academy",priorityAcademyPrice:"🇧🇷 R$ 19,95 · 🇪🇺 4,95 € le premier mois",priorityAcademyDesc:"Formations, cours, bibliothèque et contenus pour carrière et business.",priorityAcademyRenewal:"Ensuite : R$ 39,90/mois ou 9,90 €/mois. Résiliable à tout moment.",priorityAcademyCta:"DÉCOUVRIR LDR ACADEMY",language:',
+            'es:{language:':'es:{priorityKicker:"DESTACADOS",priorityTitle:"Empieza aquí",priorityMassageTitle:"Masaje para hombres en Schaerbeek — Bruselas",priorityMassagePrice:"Relajante €120 · Sensible €150",priorityMassageDesc:"Atención presencial para adultos, con cita previa.",priorityMassageCta:"RESERVAR POR WHATSAPP",priorityAcademyTitle:"LDR Academy",priorityAcademyPrice:"🇧🇷 R$ 19,95 · 🇪🇺 € 4,95 el primer mes",priorityAcademyDesc:"Formaciones, cursos, biblioteca y contenidos para carrera y negocios.",priorityAcademyRenewal:"Después: R$ 39,90/mes o € 9,90/mes. Cancela cuando quieras.",priorityAcademyCta:"CONOCER LDR ACADEMY",language:'
+          }
+          for old,new in translations.items():
+              if old not in s:
+                  raise SystemExit(f'translation anchor missing: {old}')
+              s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+          test "$(git diff --name-only | tr '\n' ' ')" = "bio/index.html "
+          git diff --check
+          grep -q 'https://ldracademy.online/' bio/index.html
+          grep -q 'Relaxante €120 · Sensível €150' bio/index.html
+          grep -q 'https://wa.me/32492923605?text=' bio/index.html
+      - name: Commit bio only
+        shell: bash
+        run: |
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html
+          git commit -m "fix: preserve original bio layout with two priority offers"
+          git push

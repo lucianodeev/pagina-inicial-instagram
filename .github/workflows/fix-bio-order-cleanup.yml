@@ -1,0 +1,101 @@
+name: Fix Bio Order Cleanup
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-bio-order-cleanup.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean and reorder bio only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('bio/index.html')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          # 1) Remove ONLY the duplicate lower massage card from the "Outros caminhos" section.
+          shortcuts = re.search(r'(<section class="section" aria-labelledby="atalhos">.*?</section>)', s, re.S)
+          if not shortcuts:
+              raise SystemExit('Shortcuts section not found')
+          sec = shortcuts.group(1)
+          sec2, n = re.subn(r'\n?<a class="card massage" href="https://wa\.me/32492923605.*?</a>\n?', '\n', sec, count=1, flags=re.S)
+          if n != 1:
+              raise SystemExit(f'Expected exactly 1 lower massage card, removed {n}')
+          s = s[:shortcuts.start(1)] + sec2 + s[shortcuts.end(1):]
+
+          # 2) Turn "Agendar com Luciano Rodrigues" into "Agendar Mentoria" and point it to Mentoria.
+          old_href = 'href="https://learn.lucianoconecta.online/profissional/luciano-rodrigues-almeida"'
+          if old_href not in s:
+              raise SystemExit('Booking Luciano card href not found')
+          s = s.replace(old_href, 'href="https://ldrrhestrategia.com/mentoria?lang=pt"', 1)
+          if '>Agendar com Luciano Rodrigues<' not in s:
+              raise SystemExit('Booking Luciano title not found')
+          s = s.replace('>Agendar com Luciano Rodrigues<', '>Agendar Mentoria<', 1)
+
+          # Update translations for that card title only.
+          replacements = {
+              'bookTitle:"Agendar com Luciano Rodrigues"':'bookTitle:"Agendar Mentoria"',
+              'bookTitle:"Book with Luciano Rodrigues"':'bookTitle:"Book Mentoring"',
+              'bookTitle:"Réserver avec Luciano Rodrigues"':'bookTitle:"Réserver un mentorat"',
+              'bookTitle:"Agendar con Luciano Rodrigues"':'bookTitle:"Agendar mentoría"'
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'Missing translation: {old}')
+              s = s.replace(old, new, 1)
+
+          # 3) Move Jornal + Revista + Clínica Social section immediately after the priority cards.
+          subs_match = re.search(r'(\n<section class="section" aria-labelledby="assinaturas">.*?</section>\n)', s, re.S)
+          if not subs_match:
+              raise SystemExit('Subscriptions/access section not found')
+          subs = subs_match.group(1)
+          # Validate expected cards in this section before moving it.
+          for key in ('newspaperTitle','magazineTitle','clinicTitle'):
+              if key not in subs:
+                  raise SystemExit(f'Expected card missing from subscriptions section: {key}')
+          s = s[:subs_match.start(1)] + '\n' + s[subs_match.end(1):]
+
+          priority_match = re.search(r'(<section class="section" id="destaques-principais".*?</section>)', s, re.S)
+          if not priority_match:
+              raise SystemExit('Priority section not found')
+          insert_at = priority_match.end(1)
+          s = s[:insert_at] + '\n' + subs.strip('\n') + '\n' + s[insert_at:]
+
+          # Final validation.
+          assert s.count('priorityMassageTitle') >= 1
+          assert 'massageTitle' in s  # translations may remain; visual lower card removed.
+          shortcuts_after = re.search(r'(<section class="section" aria-labelledby="atalhos">.*?</section>)', s, re.S).group(1)
+          assert 'class="card massage"' not in shortcuts_after
+          assert s.count('>Agendar Mentoria<') == 1
+          assert 'https://ldrrhestrategia.com/mentoria?lang=pt' in s
+          assert s.index('destaques-principais') < s.index('newspaperTitle') < s.index('decisionTitle')
+          assert s.index('newspaperTitle') < s.index('magazineTitle') < s.index('clinicTitle')
+          assert original != s
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          test "$(git diff --name-only | tr '\n' ' ')" = "bio/index.html "
+          git diff --check
+
+      - name: Commit bio only
+        shell: bash
+        run: |
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html
+          git commit -m "fix: clean and reorder bio priority content"
+          git push

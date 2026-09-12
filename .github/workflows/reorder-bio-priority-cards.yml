@@ -1,0 +1,81 @@
+name: Reorder Bio Priority Cards
+
+on:
+  push:
+    paths:
+      - '.github/workflows/reorder-bio-priority-cards.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reorder:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reorder only bio cards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('bio/index.html')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          # Remove the red Library subscription card from the offers grid only.
+          lib_pat = re.compile(r'\n?<a class="sale-card library" href="https://learn\.lucianoconecta\.online/cliente/biblioteca".*?</a>\n?', re.S)
+          s, n_lib = lib_pat.subn('\n', s, count=1)
+          if n_lib != 1:
+              raise SystemExit(f'Expected 1 library card, found {n_lib}')
+
+          # Capture and remove the existing Written Psychoanalytic Guidance card.
+          ori_pat = re.compile(r'\n?(<a class="sale-card career" href="https://learn\.lucianoconecta\.online/cliente/orientacao-psicanalitica".*?</a>)\n?', re.S)
+          m = ori_pat.search(s)
+          if not m:
+              raise SystemExit('Written psychoanalytic guidance card not found')
+          orientation_card = m.group(1)
+          s = s[:m.start()] + '\n' + s[m.end():]
+
+          # Insert the exact existing guidance card after LDR Academy inside the priority block.
+          block_pat = re.compile(r'(<section class="section" id="destaques-principais".*?<div class="links">)(.*?)(</div>\s*</section>)', re.S)
+          bm = block_pat.search(s)
+          if not bm:
+              raise SystemExit('Priority block not found')
+          body = bm.group(2)
+          if 'priorityMassageTitle' not in body or 'priorityAcademyTitle' not in body:
+              raise SystemExit('Massage or LDR Academy card missing from priority block')
+          if 'careerGuideTitle' in body:
+              raise SystemExit('Guidance card already exists in priority block')
+          new_body = body.rstrip() + '\n' + orientation_card + '\n'
+          s = s[:bm.start(2)] + new_body + s[bm.end(2):]
+
+          # Validations: exactly one of each priority offer and no duplicate guidance/library sales card.
+          assert s.count('priorityMassageTitle') >= 1
+          assert s.count('priorityAcademyTitle') >= 1
+          assert s.count('data-i18n="careerGuideTitle"') == 1
+          assert 'class="sale-card library"' not in s
+          assert s.index('priorityMassageTitle') < s.index('priorityAcademyTitle') < s.index('careerGuideTitle')
+          assert 'https://wa.me/32492923605?text=' in s
+          assert 'https://ldracademy.online/' in s
+          assert 'https://learn.lucianoconecta.online/cliente/orientacao-psicanalitica' in s
+          assert original != s
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          test "$(git diff --name-only | tr '\n' ' ')" = "bio/index.html "
+          git diff --check
+          git diff -- bio/index.html
+
+      - name: Commit bio only
+        shell: bash
+        run: |
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html
+          git commit -m "feat: group massage academy and written guidance on bio"
+          git push

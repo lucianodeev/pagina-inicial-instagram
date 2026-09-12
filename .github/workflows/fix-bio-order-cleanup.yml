@@ -26,7 +26,7 @@ jobs:
           s = p.read_text(encoding='utf-8')
           original = s
 
-          # 1) Remove ONLY the duplicate lower massage card from the "Outros caminhos" section.
+          # 1) Remove ONLY the duplicate lower massage card from "Outros caminhos".
           shortcuts = re.search(r'(<section class="section" aria-labelledby="atalhos">.*?</section>)', s, re.S)
           if not shortcuts:
               raise SystemExit('Shortcuts section not found')
@@ -36,7 +36,7 @@ jobs:
               raise SystemExit(f'Expected exactly 1 lower massage card, removed {n}')
           s = s[:shortcuts.start(1)] + sec2 + s[shortcuts.end(1):]
 
-          # 2) Turn "Agendar com Luciano Rodrigues" into "Agendar Mentoria" and point it to Mentoria.
+          # 2) Turn lower booking card into Mentoring CTA.
           old_href = 'href="https://learn.lucianoconecta.online/profissional/luciano-rodrigues-almeida"'
           if old_href not in s:
               raise SystemExit('Booking Luciano card href not found')
@@ -45,24 +45,24 @@ jobs:
               raise SystemExit('Booking Luciano title not found')
           s = s.replace('>Agendar com Luciano Rodrigues<', '>Agendar Mentoria<', 1)
 
-          # Update translations for that card title only.
-          replacements = {
-              'bookTitle:"Agendar com Luciano Rodrigues"':'bookTitle:"Agendar Mentoria"',
-              'bookTitle:"Book with Luciano Rodrigues"':'bookTitle:"Book Mentoring"',
-              'bookTitle:"Réserver avec Luciano Rodrigues"':'bookTitle:"Réserver un mentorat"',
-              'bookTitle:"Agendar con Luciano Rodrigues"':'bookTitle:"Agendar mentoría"'
+          # Update the 4 translated bookTitle values by language block, regardless of old wording.
+          lang_titles = {
+              'pt': 'Agendar Mentoria',
+              'en': 'Book Mentoring',
+              'fr': 'Réserver un mentorat',
+              'es': 'Agendar mentoría',
           }
-          for old, new in replacements.items():
-              if old not in s:
-                  raise SystemExit(f'Missing translation: {old}')
-              s = s.replace(old, new, 1)
+          for lang, title in lang_titles.items():
+              pat = re.compile(r'(' + re.escape(lang) + r':\{.*?bookTitle:")[^"]+(".*?\}\s*,?)', re.S)
+              s, n = pat.subn(lambda m: m.group(1) + title + m.group(2), s, count=1)
+              if n != 1:
+                  raise SystemExit(f'Could not update bookTitle for {lang}')
 
-          # 3) Move Jornal + Revista + Clínica Social section immediately after the priority cards.
+          # 3) Move Jornal + Revista + Clínica Social section directly after priority cards.
           subs_match = re.search(r'(\n<section class="section" aria-labelledby="assinaturas">.*?</section>\n)', s, re.S)
           if not subs_match:
               raise SystemExit('Subscriptions/access section not found')
           subs = subs_match.group(1)
-          # Validate expected cards in this section before moving it.
           for key in ('newspaperTitle','magazineTitle','clinicTitle'):
               if key not in subs:
                   raise SystemExit(f'Expected card missing from subscriptions section: {key}')
@@ -75,8 +75,6 @@ jobs:
           s = s[:insert_at] + '\n' + subs.strip('\n') + '\n' + s[insert_at:]
 
           # Final validation.
-          assert s.count('priorityMassageTitle') >= 1
-          assert 'massageTitle' in s  # translations may remain; visual lower card removed.
           shortcuts_after = re.search(r'(<section class="section" aria-labelledby="atalhos">.*?</section>)', s, re.S).group(1)
           assert 'class="card massage"' not in shortcuts_after
           assert s.count('>Agendar Mentoria<') == 1

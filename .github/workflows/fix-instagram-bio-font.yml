@@ -1,0 +1,54 @@
+name: Fix Instagram Bio Font
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-instagram-bio-font.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stabilize mobile fonts only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('bio/index.html')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          old = '*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;'
+          new = '*{box-sizing:border-box}html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}body{margin:0;'
+          if old not in s:
+              raise SystemExit('Base CSS anchor not found')
+          s = s.replace(old, new, 1)
+
+          old_media = '@media(max-width:560px){.wrap{width:min(100% - 22px,760px);padding-top:14px}'
+          new_media = '@media(max-width:560px){.wrap{width:min(100% - 22px,760px);padding-top:14px}.cta-primary{font-size:13px;line-height:1.35;padding:13px 14px;min-height:50px}.action{font-size:10px;line-height:1.2;padding:7px 10px}'
+          if old_media not in s:
+              raise SystemExit('Mobile CSS anchor not found')
+          s = s.replace(old_media, new_media, 1)
+
+          assert '-webkit-text-size-adjust:100%' in s
+          assert '.cta-primary{font-size:13px' in s
+          assert original != s
+          p.write_text(s, encoding='utf-8')
+          PY
+          test "$(git diff --name-only | tr '\n' ' ')" = "bio/index.html "
+          git diff --check
+
+      - name: Commit bio only
+        shell: bash
+        run: |
+          git config user.name "ldr-rh-campanhas"
+          git config user.email "llucianouam@gmail.com"
+          git add bio/index.html
+          git commit -m "fix: stabilize bio button fonts in Instagram browser"
+          git push

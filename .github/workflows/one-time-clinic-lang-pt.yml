@@ -1,0 +1,41 @@
+name: One-time exact Clínica Social PT link
+on:
+  push:
+    paths:
+      - '.github/workflows/one-time-clinic-lang-pt.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Change only Clínica Social href
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('bio/index.html')
+          s=p.read_text(encoding='utf-8')
+          old='href="https://clinicasocial.ldrrhestrategia.com/" target="_blank" rel="noopener"><span class="sale-icon">🤍</span><span class="copy"><span class="title" data-i18n="clinicTitle">Clínica Social LDR de Psicanálise</span>'
+          new='href="https://clinicasocial.ldrrhestrategia.com/?lang=pt" target="_blank" rel="noopener"><span class="sale-icon">🤍</span><span class="copy"><span class="title" data-i18n="clinicTitle">Clínica Social LDR de Psicanálise</span>'
+          assert s.count(old)==1, 'Expected exactly one current Clínica Social link'
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Verify scope
+        run: |
+          test "$(git diff --name-only | tr -d '\r')" = "bio/index.html"
+          git diff --exit-code -- CNAME index.html .github/workflows/pages.yml
+          grep -F 'href="https://clinicasocial.ldrrhestrategia.com/?lang=pt"' bio/index.html
+          ! grep -F 'sale-card newspaper' bio/index.html
+          ! grep -F 'sale-card magazine' bio/index.html
+      - name: Commit exact update
+        run: |
+          rm .github/workflows/one-time-clinic-lang-pt.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bio/index.html .github/workflows/one-time-clinic-lang-pt.yml
+          git commit -m "fix(bio): point Clínica Social to PT landing page"
+          git push origin main
